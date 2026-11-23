@@ -8,10 +8,12 @@ Outside the sandbox, MAKEFUN_OUTPUT_DIR stands in for /output:
 
     mkdir -p out && MAKEFUN_OUTPUT_DIR=out python3 main.py
 """
+import hashlib
 import os
 import shutil
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 
 def main():
@@ -19,10 +21,16 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     src = os.path.join(HERE, "entry.png")
     dst = os.path.join(out_dir, "entry.png")
+    with open(src, "rb") as fh:
+        head = fh.read(8)
+    if head != PNG_MAGIC:
+        raise SystemExit("entry.png is not a PNG (bad magic bytes)")
     shutil.copyfile(src, dst)
     if os.path.getsize(dst) != os.path.getsize(src):
         raise SystemExit("entry.png copy size mismatch")
-    print(f"wrote {dst} ({os.path.getsize(dst)} bytes)")
+    with open(dst, "rb") as fh:
+        digest = hashlib.sha256(fh.read()).hexdigest()
+    print(f"wrote {dst} ({os.path.getsize(dst)} bytes, sha256 {digest})")
 
 
 if __name__ == "__main__":
